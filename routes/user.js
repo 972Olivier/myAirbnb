@@ -5,6 +5,7 @@ const encBase64 = require("crypto-js/enc-base64");
 const uid2 = require("uid2");
 
 const User = require("../models/User");
+const sha256 = require("crypto-js/sha256");
 
 router.post("/user/sign_up", async (req, res) => {
   // // console.log(req.fields);
@@ -45,6 +46,49 @@ router.post("/user/sign_up", async (req, res) => {
 
         await newUser.save();
         res(newUser);
+      }
+    } else {
+      res.status(400).json({
+        error: "Missing parameters",
+      });
+    }
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+});
+
+router.post("/user/log_in", async (req, res) => {
+  try {
+    // console.log(req.fields);
+    //verification email et password
+    if (req.fields.email && req.fields.password) {
+      const findUser = await User.findOne({ email: req.fields.email });
+      if (findUser) {
+        const userHash = sha256(req.fields.password + findUser.salt).toString(
+          encBase64
+        );
+        // console.log(userHash);
+        // console.log(findUser.hash);
+        if (userHash === findUser.hash) {
+          res.json({
+            _id: findUser._id,
+            token: findUser.token,
+            email: req.fields.email,
+            username: findUser.username,
+            description: findUser.description,
+            name: findUser.name,
+          });
+        } else {
+          res.status(400).json({
+            error: "Unauthorized",
+          });
+        }
+      } else {
+        res.status(400).json({
+          error: "Unauthorized",
+        });
       }
     } else {
       res.status(400).json({
