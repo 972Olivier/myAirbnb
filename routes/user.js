@@ -44,7 +44,7 @@ router.post("/user/sign_up", async (req, res) => {
         });
 
         await newUser.save();
-        res.json(newUser);
+        res(newUser);
       }
     } else {
       res.status(400).json({
