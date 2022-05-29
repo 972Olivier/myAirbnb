@@ -6,7 +6,7 @@ const Room = mongoose.model("Room", {
   title: String,
   description: String,
   price: Number,
-  ser: { type: mongoose.Types.ObjectId, ref: "User" },
+  user: { type: mongoose.Types.ObjectId, ref: "User" },
 });
 
 module.exports = Room;
