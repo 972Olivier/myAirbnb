@@ -2,8 +2,8 @@ const express = require("express");
 const User = require("../models/User");
 const Room = require("../models/Room");
 const isAuthenticated = require("../middlewares/isAuthenticated");
-const res = require("express/lib/response");
-const { findByIdAndDelete } = require("../models/Room");
+const RoomModel = require("../models/Room");
+const cloudinary = require("cloudinary").v2;
 
 const router = express.Router();
 

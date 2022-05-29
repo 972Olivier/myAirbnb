@@ -3,9 +3,11 @@ const router = express.Router();
 const SHA256 = require("crypto-js/sha256");
 const encBase64 = require("crypto-js/enc-base64");
 const uid2 = require("uid2");
+const isAuthenticated = require("../middlewares/isAuthenticated");
 
 const User = require("../models/User");
 const sha256 = require("crypto-js/sha256");
+const cloudinary = require("cloudinary").v2;
 
 router.post("/user/sign_up", async (req, res) => {
   // // console.log(req.fields);
@@ -45,7 +47,7 @@ router.post("/user/sign_up", async (req, res) => {
         });
 
         await newUser.save();
-        res(newUser);
+        res.json(newUser);
       }
     } else {
       res.status(400).json({
@@ -95,6 +97,45 @@ router.post("/user/log_in", async (req, res) => {
         error: "Missing parameters",
       });
     }
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+});
+
+router.get("/user/upload_picture/:id", isAuthenticated, async (req, res) => {
+  try {
+    // console.log(req.headers.authorization.replace("Bearer ", ""));
+    // console.log(req.user);
+    // console.log(req.params.id);
+    // res.json(req.files.photo);
+    // console.log(req.files.photo.path);
+    const cloudinaryPhotoUser = await cloudinary.uploader.upload(
+      req.files.photo.path,
+      {
+        folder: `/myAirbnb`,
+      }
+    );
+    // console.log(cloudinaryPhotoUser);
+    const findUser = await User.findById({ _id: req.params.id });
+    findUser.photo = {
+      url: cloudinaryPhotoUser.secure_url,
+      picture_id: cloudinaryPhotoUser.asset_id,
+    };
+
+    await findUser.save();
+    res.json({
+      account: {
+        photo: findUser.photo,
+        username: findUser.username,
+        description: findUser.description,
+        name: findUser.name,
+      },
+      _id: findUser._id,
+      email: findUser.email,
+      rooms: [],
+    });
   } catch (error) {
     res.status(400).json({
       message: error.message,

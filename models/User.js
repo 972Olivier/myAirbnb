@@ -6,6 +6,10 @@ const User = mongoose.model("User", {
     unique: true,
     type: String,
   },
+  photo: {
+    url: { type: mongoose.Schema.Types.Mixed, default: {} },
+    picture_id: String,
+  },
   username: String,
   name: String,
   description: String,
