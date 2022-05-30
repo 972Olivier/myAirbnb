@@ -174,4 +174,57 @@ router.get("/room/delete/:id", isAuthenticated, async (req, res) => {
   }
 });
 
+router.get("/room/upload_picture/:id", isAuthenticated, (req, res) => {
+  const fileKeys = Object.keys(req.files);
+  let results = {};
+
+  if (fileKeys.length === 0) {
+    res.send("No file uploaded!");
+    return;
+  } else if (fileKeys.length < 6) {
+    fileKeys.forEach(async (fileKey) => {
+      try {
+        const file = req.files[fileKey];
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: `/myAirbnb/room`,
+        });
+        results[fileKey] = {
+          success: true,
+          result: result,
+        };
+
+        if (Object.keys(results).length === fileKeys.length) {
+          // tous les uploads sont terminés, on peut donc envoyer la réponse au client
+
+          const arrayValue = Object.values(results);
+
+          // console.log(arrayValue.length);
+          const arrayUrl = [];
+          for (let i = 0; i < arrayValue.length; i++) {
+            const object = {
+              url: arrayValue[i].result.secure_url,
+              public_id: arrayValue[i].result.public_id,
+            };
+
+            arrayUrl.push(object);
+          }
+          // console.log(arrayUrl);
+          const findRoom = await Room.findById({ _id: req.params.id });
+          // console.log(findRoom);
+          findRoom.photos = arrayUrl;
+          await findRoom.save();
+
+          res.json(findRoom);
+        }
+      } catch (error) {
+        return res.json({ error: error.message });
+      }
+    });
+  } else {
+    res.status(400).json({
+      message: "you can uploaded 5 pictures max",
+    });
+  }
+});
+
 module.exports = router;

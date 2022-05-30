@@ -117,11 +117,11 @@ router.get("/user/upload_picture/:id", isAuthenticated, async (req, res) => {
         folder: `/myAirbnb`,
       }
     );
-    // console.log(cloudinaryPhotoUser);
+    // console.log(cloudinaryPhotoUser); affiche toutes les infos de la photo uploded
     const findUser = await User.findById({ _id: req.params.id });
     findUser.photo = {
       url: cloudinaryPhotoUser.secure_url,
-      picture_id: cloudinaryPhotoUser.asset_id,
+      picture_id: cloudinaryPhotoUser.public_id,
     };
 
     await findUser.save();
@@ -140,6 +140,32 @@ router.get("/user/upload_picture/:id", isAuthenticated, async (req, res) => {
     res.status(400).json({
       message: error.message,
     });
+  }
+});
+
+router.get("/user/delete_picture/:id", isAuthenticated, async (req, res) => {
+  try {
+    // console.log(req.params.id);
+    const userWithoutPhoto = await User.findById({ _id: req.params.id });
+    // console.log(userWithoutPhoto);
+    const id = userWithoutPhoto.photo.picture_id;
+    // console.log("test ===> " + id);
+    await cloudinary.api.delete_resources_by_prefix(`${id}`);
+    userWithoutPhoto.photo = null;
+    await userWithoutPhoto.save();
+    res.json({
+      account: {
+        photo: userWithoutPhoto.photo,
+        username: userWithoutPhoto.username,
+        description: userWithoutPhoto.description,
+        name: userWithoutPhoto.name,
+      },
+      _id: userWithoutPhoto._id,
+      email: userWithoutPhoto.email,
+      rooms: [],
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 });
 
