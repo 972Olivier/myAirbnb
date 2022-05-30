@@ -227,4 +227,38 @@ router.get("/room/upload_picture/:id", isAuthenticated, (req, res) => {
   }
 });
 
+router.get("/room/delete_picture/:id", isAuthenticated, async (req, res) => {
+  try {
+    // console.log(req.fields); //{ picture_id: 'qjvfkd2ebwtv8lrun9ch' }
+    const id = req.fields.picture_id;
+    await cloudinary.api.delete_resources_by_prefix(`myAirbnb/room/${id}`);
+    const findRoomdeletePhoto = await Room.findById({ _id: req.params.id });
+    // res.json(findRoomdeletePhoto.photos);
+    const newArray = findRoomdeletePhoto.photos;
+    const regex = new RegExp(id);
+    const arrayFiler = [];
+    newArray.forEach((element) => {
+      // console.log(element);
+      // console.log(element.public_id);
+      // console.log(regex.test(element.public_id));
+      // arrayFiler.push(element);
+      if (regex.test(element.public_id)) {
+        console.log("picture to delete found ===>", element);
+      } else {
+        arrayFiler.push(element);
+      }
+    });
+    findRoomdeletePhoto.photos = arrayFiler;
+    await findRoomdeletePhoto.save();
+
+    res.json({
+      message: "Picture deleted",
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+});
+
 module.exports = router;
