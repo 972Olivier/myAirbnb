@@ -15,6 +15,7 @@ const User = mongoose.model("User", {
   description: String,
   hash: String,
   salt: String,
+  rooms: Array,
 });
 
 module.exports = User;

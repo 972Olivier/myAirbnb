@@ -4,6 +4,7 @@ const SHA256 = require("crypto-js/sha256");
 const encBase64 = require("crypto-js/enc-base64");
 const uid2 = require("uid2");
 const isAuthenticated = require("../middlewares/isAuthenticated");
+const Room = require("../models/Room");
 
 const User = require("../models/User");
 const sha256 = require("crypto-js/sha256");
@@ -166,6 +167,55 @@ router.get("/user/delete_picture/:id", isAuthenticated, async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+router.get("/users/:id", async (req, res) => {
+  try {
+    // console.log(req.params.id);
+    const findById = await User.findById({ _id: req.params.id });
+    // console.log(findById);
+    const roomUser = await Room.find({ user: findById });
+    // console.log(roomUser);
+    const roomsPush = [];
+    const forEach = roomUser.forEach((element) => {
+      roomsPush.push(element._id);
+    });
+    findById.rooms = roomsPush;
+    await findById.save();
+    res.json({
+      _id: findById._id,
+      account: {
+        username: findById.username,
+        name: findById.name,
+        description: findById.description,
+        photo: findById.photo,
+      },
+      rooms: findById.rooms,
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+});
+
+router.get("/user/rooms/:id", async (req, res) => {
+  try {
+    const findByIdUser = await User.findById({ _id: req.params.id }).select(
+      "rooms"
+    );
+    let array = findByIdUser.rooms;
+    const arrayRooms = [];
+    for (let i = 0; i < array.length; i++) {
+      let result = await Room.findById({ _id: array[i] });
+      arrayRooms.push(result);
+    }
+    res.json(arrayRooms);
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
   }
 });
 
