@@ -50,10 +50,61 @@ router.post("/room/publish", isAuthenticated, async (req, res) => {
   }
 });
 
+//### Lire les annonces (filtres)
 router.get("/rooms", async (req, res) => {
   try {
-    const roomFind = await Room.find().select("-description");
-    res.json(roomFind);
+    // console.log(req.query);
+    const fieldsRecived = req.query;
+    const { title, priceMin, priceMax, filter, page } = fieldsRecived;
+    // console.log(title);
+    // console.log(priceMin);
+    // console.log(priceMax);
+    // console.log(filter);
+    // console.log(page);
+
+    let minOrMax;
+    let skip = 0;
+    const limit = 3;
+    if (page) {
+      skip = (page - 1) * limit;
+    }
+
+    // détermine le prix min et max et permet les comaparaisons dans la recherche
+    if (priceMin && priceMax) {
+      minOrMax = {
+        $gte: priceMin,
+        $lte: priceMax,
+      };
+    } else if (priceMin && !priceMax) {
+      minOrMax = { $gte: priceMin };
+    } else if (!priceMin && priceMax) {
+      minOrMax = {
+        $lte: priceMax,
+      };
+    } else if (!priceMin && !priceMax) {
+      // attribution d'un prix min au cas de paramètres de prix manquant
+      minOrMax = {
+        $gte: Number(0),
+      };
+    }
+    // RegExp pour permettre la recherche d'un mot dans une chaine de caractère non sensible Maj ou min
+    const regex = new RegExp(title, "i");
+    // console.log(filter);
+    const findRooms = await Room.find({
+      title: regex,
+      price: minOrMax,
+    })
+      .sort({ price: filter }) // trie croissant ou décroissant
+      .skip(skip)
+      .limit(limit);
+
+    // compteur d'annonces
+    const count = await Room.countDocuments({
+      title: regex,
+      price: minOrMax,
+    });
+    console.log(count);
+    res.json(findRooms);
   } catch (error) {
     res.status(400).json({
       message: error.message,

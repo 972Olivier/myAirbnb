@@ -170,6 +170,8 @@ router.get("/user/delete_picture/:id", isAuthenticated, async (req, res) => {
   }
 });
 
+//### Lire un profil utilisateur
+
 router.get("/users/:id", async (req, res) => {
   try {
     // console.log(req.params.id);
@@ -199,6 +201,8 @@ router.get("/users/:id", async (req, res) => {
     });
   }
 });
+
+//### Lire les annonces d'un utilisateur
 
 router.get("/user/rooms/:id", async (req, res) => {
   try {
