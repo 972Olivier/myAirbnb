@@ -223,4 +223,49 @@ router.get("/user/rooms/:id", async (req, res) => {
   }
 });
 
+router.post("/user/update", isAuthenticated, async (req, res) => {
+  try {
+    // console.log(req.fields);
+    const { email, name, description, username } = req.fields;
+    // console.log(email, name, description, username);
+    const findEmail = await User.findOne({ email });
+    const findUsername = await User.findOne({ username });
+    // console.log(req.user);
+    // console.log(findEmail);
+    // console.log(findUsername);
+    if (email && !findEmail) {
+      req.user.email = email;
+      await req.user.save();
+    }
+
+    if (username && !findUsername) {
+      req.user.username = username;
+      await req.user.save();
+    }
+    if (req.user.description !== description && description) {
+      req.user.description = description;
+      await req.user.save();
+    }
+    if (name && req.user.name !== name) {
+      req.user.name = name;
+      await req.user.save();
+    }
+    res.json({
+      _id: req.user._id,
+      email: req.user.email,
+      account: {
+        username: req.user.username,
+        name: req.user.name,
+        description: req.user.description,
+        photo: req.user.photo,
+      },
+      rooms: req.user.rooms,
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+});
+
 module.exports = router;
