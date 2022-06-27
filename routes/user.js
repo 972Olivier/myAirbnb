@@ -465,11 +465,44 @@ router.delete("/user/delete/:id", async (req, res) => {
   const UserId = req.params.id;
   const user = await User.findById({ _id: UserId });
   if (user) {
-    res.json(user);
-    console.log(user.rooms); // id des models Rooms de l'user
-    // supprimer les photos de l'user sur cloundinary
+    // supprimer photo profil et les photos de l'user sur cloundinary
+    const pictureUser = user.photo.picture_id;
+    await cloudinary.api.delete_resources_by_prefix(`${pictureUser}`);
+
+    // console.log(pictureUser);
+    const roomsOfUser = user.rooms; //array des rooms de l'user
+    // console.log(roomsOfUser);
+    // id des models Rooms de l'user
+    const arrayRoomsPictures = [];
+    const arrayPublic_id = [];
+    for (let i = 0; i < roomsOfUser.length; i++) {
+      // console.log(roomsOfUser[i]);
+      let findTheRoom = await Room.findById(roomsOfUser[i]).select("photos");
+      arrayRoomsPictures.push(findTheRoom.photos);
+      for (let j = 0; j < arrayRoomsPictures[i].length; j++) {
+        if (arrayRoomsPictures[i][j].public_id) {
+          arrayPublic_id.push(arrayRoomsPictures[i][j].public_id);
+        }
+      }
+    }
+    // console.log(arrayPublic_id);// array contenant l'ensemble des public_id des rooms de l'user
+    arrayPublic_id.forEach(async (element) => {
+      // console.log(`voici ===> ${element}`);
+      await cloudinary.api.delete_resources_by_prefix(`${element}`);
+      console.log(`${element} is now deleted`);
+    });
     //suprimer les rooms en BDD
-    // suprimer l'user en BDD
+    roomsOfUser.forEach(async (element) => {
+      // console.log(`voici ===> ${element}`);
+      await Room.findByIdAndDelete(element);
+      console.log(`${element} is now deleted`);
+    });
+    //suprimer le user en BDD
+    await User.findByIdAndDelete({ _id: UserId });
+
+    res.json({
+      message: "User deleted",
+    });
   }
 });
 module.exports = router;
