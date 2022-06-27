@@ -12,6 +12,7 @@ const cloudinary = require("cloudinary").v2;
 
 const formdata = require("form-data");
 const Mailgun = require("mailgun.js");
+const { findById } = require("../models/User");
 
 const mailgun = new Mailgun(formdata);
 const client = mailgun.client({
@@ -378,7 +379,7 @@ router.put("/user/recover_password", async (req, res) => {
           from: `MyAibnb <MyAirbnb@email.com>`,
           to: "oliviercen@gmail.com", // à changer par un email valide de l'utilisateur ====> req.user.email
           subject: "New password",
-          text: `your temporary token ==> ${user.tokenLimitedPassword}`,
+          text: `You have 15 min to indicate your new password and to use your temporary token ==> ${user.tokenLimitedPassword}`,
         };
 
         client.messages
@@ -413,4 +414,62 @@ router.put("/user/recover_password", async (req, res) => {
   }
 });
 
+//### Réinitialiser le mot de passe d'un utilisateur------
+
+router.put("/user/reset_password", async (req, res) => {
+  // console.log(req.fields);
+  // res.json("here");
+  const { passwordToken, password } = req.fields;
+  if (passwordToken && password) {
+    // console.log("it's good");
+    const user = await User.findOne({ tokenLimitedPassword: passwordToken });
+    // console.log(user);
+    if (user) {
+      // 15 min en millisecondes = 900000
+      // console.log(user.timeStartPassword);
+      const endDate = Date.now() - user.timeStartPassword;
+      console.log(endDate);
+      if (endDate < 90000) {
+        const newSalt = uid2(16);
+        // console.log("newSalt ===>", newSalt);
+        const newHash = SHA256(req.fields.password + newSalt).toString(
+          encBase64
+        );
+        user.salt = newSalt;
+        // console.log(newHash);
+        user.hash = newHash;
+        await user.save();
+        res.json({
+          _id: user._id,
+          email: user.email,
+          token: user.token,
+        });
+      } else {
+        res.json("you past the time authorized of 15 min ");
+      }
+    } else {
+      res.status(400).json({
+        message: "user not found",
+      });
+    }
+  } else {
+    res.status(400).json({
+      message: "missing parameters",
+    });
+  }
+  // console.log(passwordToken, password);
+});
+
+router.delete("/user/delete/:id", async (req, res) => {
+  // console.log(req.params);
+  const UserId = req.params.id;
+  const user = await User.findById({ _id: UserId });
+  if (user) {
+    res.json(user);
+    console.log(user.rooms); // id des models Rooms de l'user
+    // supprimer les photos de l'user sur cloundinary
+    //suprimer les rooms en BDD
+    // suprimer l'user en BDD
+  }
+});
 module.exports = router;
