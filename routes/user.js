@@ -10,6 +10,19 @@ const User = require("../models/User");
 const sha256 = require("crypto-js/sha256");
 const cloudinary = require("cloudinary").v2;
 
+const formdata = require("form-data");
+const Mailgun = require("mailgun.js");
+
+const mailgun = new Mailgun(formdata);
+const client = mailgun.client({
+  username: "Olivier",
+  key: process.env.MAILGUN_API_KEY,
+});
+
+// Identifiants mailgun
+// const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY; // L'API_KEY fournie par mailgun
+// const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN; // Le domaine fourni par mailgun
+
 router.post("/user/sign_up", async (req, res) => {
   // // console.log(req.fields);
   const { email, password, username, name, description } = req.fields;
@@ -223,6 +236,8 @@ router.get("/user/rooms/:id", async (req, res) => {
   }
 });
 
+/*----- modifier des élements de l'utilisateur--------*/
+
 router.post("/user/update", isAuthenticated, async (req, res) => {
   try {
     // console.log(req.fields);
@@ -261,6 +276,78 @@ router.post("/user/update", isAuthenticated, async (req, res) => {
       },
       rooms: req.user.rooms,
     });
+  } catch (error) {
+    res.status(400).json({
+      message: error.message,
+    });
+  }
+});
+
+/*---- modifier le mot de passe d'un utilisateur authentifié -----*/
+
+router.post("/user/update_password", isAuthenticated, async (req, res) => {
+  // console.log(req.user);
+  try {
+    if (req.fields.previousPassword !== req.fields.newPassword) {
+      // à faire vérifier que le mot de passe ancien refait le hass. si c'est le cas on continue
+      if (
+        req.user.hash ===
+        sha256(req.fields.previousPassword + req.user.salt).toString(encBase64)
+      ) {
+        // //------la suite---
+        const newToken = uid2(16);
+        console.log("newToken ====>", newToken);
+        const newSalt = uid2(16);
+        console.log("newSalt ===>", newSalt);
+        const newHash = SHA256(req.fields.newPassword + newSalt).toString(
+          encBase64
+        );
+        console.log("newHash", newHash);
+        req.user.token = newToken;
+        req.user.salt = newSalt;
+        req.user.hash = newHash;
+        await req.user.save();
+
+        // mailgun et envoie de message pour indiquer que le mot de passe est modifié
+        const messageData = {
+          from: `MyAibnb <MyAirbnb@email.com>`,
+          to: "oliviercen@gmail.com", // à changer par un email valide de l'utilisateur ====> req.user.email
+          subject: "New password",
+          text: "your new password is a reality !!!!!",
+        };
+
+        client.messages
+          .create(process.env.MAILGUN_DOMAIN, messageData)
+          .then((response) => {
+            console.log(response);
+            res.status(200).json({
+              _id: req.user._id,
+              email: req.user.email,
+              token: req.user.token,
+              account: {
+                username: req.user.username,
+                name: req.user.name,
+                description: req.user.description,
+                photo: req.user.photo,
+              },
+              rooms: req.user.rooms,
+            });
+          })
+          .catch((error) => {
+            res.status(400).json({
+              message: error.message,
+            });
+          });
+
+        // res.json("passworded checked");
+      } else {
+        res.status(400).json({
+          message: "unhautorized",
+        });
+      }
+    } else {
+      res.json("same password");
+    }
   } catch (error) {
     res.status(400).json({
       message: error.message,
