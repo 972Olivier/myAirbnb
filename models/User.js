@@ -15,6 +15,8 @@ const User = mongoose.model("User", {
   description: String,
   hash: String,
   salt: String,
+  tokenLimitedPassword: { type: String, default: null },
+  timeStartPassword: { type: Number, default: null },
   rooms: Array,
 });
 

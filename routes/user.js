@@ -236,7 +236,7 @@ router.get("/user/rooms/:id", async (req, res) => {
   }
 });
 
-/*----- modifier des élements de l'utilisateur--------*/
+//*----- modifier des élements de l'utilisateur--------*/
 
 router.post("/user/update", isAuthenticated, async (req, res) => {
   try {
@@ -351,6 +351,64 @@ router.post("/user/update_password", isAuthenticated, async (req, res) => {
   } catch (error) {
     res.status(400).json({
       message: error.message,
+    });
+  }
+});
+
+//### Envoyer un mail afin qu'un utilisateur non authentifié puisse modifier son mot de passe
+router.put("/user/recover_password", async (req, res) => {
+  // console.log(req.fields.email);
+  // res.json("here");
+  try {
+    if (req.fields.email) {
+      const user = await User.findOne({
+        email: req.fields.email,
+      });
+      if (user) {
+        const token_limited = uid2(16);
+        // console.log(tokenLimited);
+        user.tokenLimitedPassword = token_limited;
+        const time_start = Date.now(); // date en milliseconde
+        // console.log(timeStart);
+        user.timeStartPassword = time_start;
+        await user.save();
+        // console.log(user);
+        // envoi de l'email contenant le token temporaire-------------
+        const messageData = {
+          from: `MyAibnb <MyAirbnb@email.com>`,
+          to: "oliviercen@gmail.com", // à changer par un email valide de l'utilisateur ====> req.user.email
+          subject: "New password",
+          text: `your temporary token ==> ${user.tokenLimitedPassword}`,
+        };
+
+        client.messages
+          .create(process.env.MAILGUN_DOMAIN, messageData)
+          .then((response) => {
+            console.log(response);
+          })
+          .catch((error) => {
+            res.status(400).json({
+              message: error.message,
+            });
+          });
+
+        //------------------------------------
+        res.json({
+          message: "A link has been sent to the user",
+        });
+      } else {
+        res.status(400).json({
+          message: "user not found",
+        });
+      }
+    } else {
+      res.status(400).json({
+        message: "missing parameters",
+      });
+    }
+  } catch (error) {
+    res.status(400).json({
+      message: message.error,
     });
   }
 });
